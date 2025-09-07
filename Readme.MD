@@ -32,6 +32,8 @@ cd AutoSec-MCP
 cp examples/.env.example .env
 # Fill in secrets in .env (GitHub token, Snyk token, Slack webhook, etc.)
 
+---
+
 ### 2. Launch the Stack
 
 ```bash
@@ -42,6 +44,7 @@ This starts:
 • 	PostgreSQL database for n8n
 • 	A sample MCP server with GitHub integration
 
+---
 
 ### 3. Import Workflows into n8n
 • 	Open n8n at http://localhost:5678
@@ -49,10 +52,14 @@ This starts:
 • 	 – handles incoming Snyk data, routes alerts, and triggers MCP
 • 	 – filters issues, applies policy, and initiates remediation
 
+---
+
 ### 4. Run a Snyk Scan and Trigger the Flow
 
 ```bash
 node scripts/snyk_scan_trigger.js --path . --minSeverity=high
+
+---
 
 ## 🧪 End-to-End Test
 
@@ -61,13 +68,20 @@ node scripts/snyk_scan_trigger.js --path . --minSeverity=high
 ```bash
 docker compose up
 
+---
+
 ### 2. 	Import and publish workflows in n8n
+---
+
 ### 3. 	Run a scan manually or via CI
+---
+
 ### 4. 	Observe results
 • 	Slack notification for findings
 • 	GitHub issue creation for critical vulnerabilities
 • 	Jira ticket creation 
 • 	Remediation webhook triggered for high-severity issues
+---
 
 ## 🛡 Production Deployment Tips
 • 	Run n8n behind HTTPS and authentication
@@ -75,3 +89,4 @@ docker compose up
 • 	Use fine-grained GitHub tokens scoped to specific repos
 • 	Integrate Snyk scans into your CI pipeline and post results to n8n
 • 	Keep auto-remediation behind manual approval until trust is established
+---
