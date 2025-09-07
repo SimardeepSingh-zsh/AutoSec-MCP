@@ -31,51 +31,91 @@ git clone https://github.com/SimardeepSingh-zsh/AutoSec-MCP.git
 cd AutoSec-MCP
 cp examples/.env.example .env
 # Fill in secrets in .env (GitHub token, Snyk token, Slack webhook, etc.)
+```
 
-2. Launch the Stack
+### 2. Launch the Stack
+
 ```bash
 docker compose -f examples/docker-compose.yml --env-file .env up -d --build
+```
 
 This starts:
-• 	n8n workflow engine
-• 	PostgreSQL database for n8n
-• 	A sample MCP server with GitHub integration
+- n8n workflow engine  
+- PostgreSQL database for n8n  
+- A sample MCP server with GitHub integration
 
-3. Import Workflows into n8n
-• 	Open n8n at http://localhost:5678
-• 	Import the following JSON files from :
-• 	 – handles incoming Snyk data, routes alerts, and triggers MCP
-• 	 – filters issues, applies policy, and initiates remediation
+### 3. Import Workflows into n8n
 
-4. Run a Snyk Scan and Trigger the Flow
+- Open n8n at [http://localhost:5678](http://localhost:5678)  
+- Import the following JSON files from `/workflows`:
+  - `snyk-to-n8n.json` – handles incoming Snyk data, routes alerts, and triggers MCP
+  - `mcp-driven-remediation.json` – filters issues, applies policy, and initiates remediation
+
+### 4. Run a Snyk Scan and Trigger the Flow
+
 ```bash
 node scripts/snyk_scan_trigger.js --path . --minSeverity=high
+```
 
-🧪 End-to-End Test
-1. Start the Stack
+---
+
+## 🧪 End-to-End Test
+
+### 1. Start the Stack
+
 ```bash
 docker compose up
+```
 
-2. Import and Publish Workflows in n8n
-• 	Use the n8n editor to import both workflows
-• 	Publish them to make them active
+### 2. Import and Publish Workflows in n8n
 
-3. Run a Scan Manually or via CI
-• 	Use the CLI script or GitHub Action to trigger a Snyk scan
-• 	Post results to the n8n webhook
+- Use the n8n editor to import both workflows  
+- Publish them to make them active
 
-4. Observe Results
-• 	Slack notification for findings
-• 	GitHub issue creation for critical vulnerabilities
-• 	Jira ticket creation
-• 	Remediation webhook triggered for high-severity issues
+### 3. Run a Scan Manually or via CI
 
-🛡 Production Deployment Tips
-• 	Run n8n behind HTTPS and authentication
-• 	Host MCP server behind an API gateway with mTLS or token-based auth
-• 	Use fine-grained GitHub tokens scoped to specific repos
-• 	Integrate Snyk scans into your CI pipeline and post results to n8n
-• 	Keep auto-remediation behind manual approval until trust is established
+- Use the CLI script or GitHub Action to trigger a Snyk scan  
+- Post results to the n8n webhook
 
+### 4. Observe Results
 
+- Slack notification for findings  
+- GitHub issue creation for critical vulnerabilities  
+- Jira ticket creation  
+- Remediation webhook triggered for high-severity issues
 
+---
+
+## 🛡 Production Deployment Tips
+
+- Run n8n behind HTTPS and authentication  
+- Host MCP server behind an API gateway with mTLS or token-based auth  
+- Use fine-grained GitHub tokens scoped to specific repos  
+- Integrate Snyk scans into your CI pipeline and post results to n8n  
+- Keep auto-remediation behind manual approval until trust is established
+
+---
+
+## 🗂 Folder & File Overview
+
+| Path              | Purpose                                           |
+|-------------------|---------------------------------------------------|
+| `docs/`           | Setup guides and architecture explanations        |
+| `scripts/`        | CLI tools to trigger scans and remediation        |
+| `workflows/`      | Importable n8n workflow JSON files                |
+| `examples/`       | Docker Compose setup and sample MCP server        |
+| `.env.example`    | Template for environment variables                |
+| `LICENSE`         | MIT license for open use                          |
+| `README.md`       | This file — your guide to the repo                |
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome. If you’d like to add new workflows, integrations, or improvements, please check out `CONTRIBUTING.md`.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License — see `LICENSE` for details.
