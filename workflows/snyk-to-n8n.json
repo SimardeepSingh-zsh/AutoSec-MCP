@@ -1,0 +1,121 @@
+{
+  "name": "Snyk → n8n routing and notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "snyk/webhook",
+        "options": { "responseCode": 200 }
+      },
+      "id": "Webhook_Entry",
+      "name": "Snyk Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 240]
+    },
+    {
+      "parameters": {
+        "functionCode": "const payload = items[0].json;\nconst issues = payload.issues || [];\nconst critical = issues.filter(i => (i.severity||'').toLowerCase()==='critical');\nconst high = issues.filter(i => (i.severity||'').toLowerCase()==='high');\nreturn [{ json: { meta: payload, counts: { critical: critical.length, high: high.length }, critical, high } }];"
+      },
+      "id": "Function_Parse",
+      "name": "Parse & Split",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [520, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "{{$json.counts.critical}}",
+              "operation": "larger",
+              "value2": "0"
+            }
+          ]
+        }
+      },
+      "id": "IF_Critical",
+      "name": "Any Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [760, 160]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$json.meta.repo ? $json.meta.repo : ''}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"text\": `Snyk findings: Critical ${$json.counts.critical}, High ${$json.counts.high} in ${$json.meta.repo||'local'} (${new Date($json.meta.timestamp).toISOString()})` }"
+      },
+      "id": "Slack_Notify",
+      "name": "Slack Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [760, 320],
+      "notesInFlow": true,
+      "notes": "Point this to your Slack Incoming Webhook URL via credentials"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.MCP_SERVER_URL}}/action/createGithubIssue",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"repo\": $env.TARGET_REPO, \"title\": `Critical vulnerabilities detected`, \"body\": `Automatically logged by n8n. Found ${$json.counts.critical} critical issues.\\n\\nSample:\\n\\n${JSON.stringify($json.critical.slice(0,3), null, 2)}` }"
+      },
+      "id": "MCP_Create_Issue",
+      "name": "MCP Create Issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 120]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.MCP_SERVER_URL}}/action/triggerN8nWebhook",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"url\": $env.N8N_REMEDIATION_WEBHOOK, \"payload\": { \"type\": \"remediate-highs\", \"issues\": $json.high.slice(0,5), \"repo\": $json.meta.repo } }"
+      },
+      "id": "MCP_Trigger_Remediation",
+      "name": "MCP Trigger Remediation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 220]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "projectKey": "SEC",
+        "summary": "Critical vulnerability detected in {{$json.meta.repo}}",
+        "description": "Found {{$json.counts.critical}} critical issues. Sample:\n\n{{JSON.stringify($json.critical.slice(0,2), null, 2)}}",
+        "issueType": "Bug"
+      },
+      "id": "Jira_Create_Ticket",
+      "name": "Create Jira Ticket",
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [1000, 20]
+    }
+  ],
+  "connections": {
+    "Snyk Webhook": {
+      "main": [[{ "node": "Parse & Split", "type": "main", "index": 0 }]]
+    },
+    "Parse & Split": {
+      "main": [
+        [{ "node": "Any Critical?", "type": "main", "index": 0 }],
+        [{ "node": "Slack Notify", "type": "main", "index": 0 }]
+      ]
+    },
+    "Any Critical?": {
+      "main": [
+        [{ "node": "MCP Create Issue", "type": "main", "index": 0 }],
+        [{ "node": "MCP Trigger Remediation", "type": "main", "index": 0 }],
+        [{ "node": "Create Jira Ticket", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {}
+}

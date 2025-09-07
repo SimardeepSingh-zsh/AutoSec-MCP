@@ -1,0 +1,77 @@
+{
+  "name": "MCP-driven remediation",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "remediation/webhook",
+        "options": { "responseCode": 200 }
+      },
+      "id": "Webhook_Remediation",
+      "name": "Remediation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const payload = items[0].json;\nconst issues = payload.issues || [];\nconst candidates = issues\n  .filter(i => (i.ecosystem||'npm')==='npm' && i.package && i.remediation && i.remediation.fixedIn)\n  .map(i => ({ dep: i.package, version: Array.isArray(i.remediation.fixedIn) ? i.remediation.fixedIn[0] : i.remediation.fixedIn }));\nreturn candidates.map(c => ({ json: c }));"
+      },
+      "id": "Function_Select",
+      "name": "Select Candidates",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const allowlist = ['lodash', 'express'];\nreturn items.filter(i => allowlist.includes(i.json.dep));"
+      },
+      "id": "Policy_Engine",
+      "name": "Policy Engine",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [640, 200]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.MCP_SERVER_URL}}/action/createGithubIssue",
+        "jsonParameters": true,
+        "bodyParametersJson": "={\"repo\": $env.TARGET_REPO, \"title\": `Consider bumping ${$json.dep} to ${$json.version}`, \"body\": `Automated recommendation. Please review.`}"
+      },
+      "id": "MCP_Open_Issue",
+      "name": "Open Tracking Issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [860, 120]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.MCP_SERVER_URL}}/action/triggerN8nWebhook",
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"url\": $env.N8N_LOCAL_EXEC_WEBHOOK, \"payload\": { \"op\": \"run-auto-remediation\", \"dep\": $json.dep, \"version\": $json.version } }"
+      },
+      "id": "MCP_Chain",
+      "name": "Chain Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [860, 280]
+    }
+  ],
+  "connections": {
+    "Remediation Webhook": {
+      "main": [[{ "node": "Select Candidates", "type": "main", "index": 0 }]]
+    },
+    "Select Candidates": {
+      "main": [[{ "node": "Policy Engine", "type": "main", "index": 0 }]]
+    },
+    "Policy Engine": {
+      "main": [
+        [{ "node": "Open Tracking Issue", "type": "main", "index": 0 }],
+        [{ "node": "Chain Tasks", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {}
+}

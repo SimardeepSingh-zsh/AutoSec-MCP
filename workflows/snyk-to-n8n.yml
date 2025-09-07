@@ -1,0 +1,22 @@
+name: Snyk Scan and Trigger n8n
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  snyk-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Snyk
+        run: npm install -g snyk
+      - name: Run Snyk and post to n8n
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          N8N_SNYK_WEBHOOK_URL: ${{ secrets.N8N_SNYK_WEBHOOK_URL }}
+        run: node scripts/snyk_scan_trigger.js --path . --minSeverity=high
